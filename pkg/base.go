@@ -66,7 +66,7 @@ type Base interface {
 	Merge(other interface{})
 	FromSqlRow(rows *sql.Rows) (Base, error)
 	SetExternalId(externalId string)
-	ToBytes() (bytes.Buffer, error)
+	ToBytes() (*bytes.Buffer, error)
 	ToJson() (string, error)
 	String() string
 }
