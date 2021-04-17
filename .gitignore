@@ -1,0 +1,7 @@
+.idea
+go.sum
+*.log
+*.iml
+.vcs
+.DS_STORE
+vendor/
