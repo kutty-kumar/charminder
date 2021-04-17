@@ -1,4 +1,4 @@
-package charminder
+package pkg
 
 import (
 	"context"
@@ -16,7 +16,6 @@ type GORMRepository struct {
 	creator          EntityCreator
 	externalIdSetter ExternalIdSetter
 	logger *logrus.Logger
-	ctx context.Context
 }
 
 func WithCreator(creator EntityCreator) GORMRepositoryOption {
@@ -40,12 +39,6 @@ func WithLogger(logger *logrus.Logger) GORMRepositoryOption {
 func WithDb(db *gorm.DB) GORMRepositoryOption {
 	return func(r *GORMRepository) {
 		r.db = db
-	}
-}
-
-func WithContext(ctx context.Context) GORMRepositoryOption {
-	return func(r *GORMRepository) {
-		r.ctx = ctx
 	}
 }
 

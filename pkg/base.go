@@ -1,4 +1,4 @@
-package charminder
+package pkg
 
 import (
 	"bytes"
