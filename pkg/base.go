@@ -3,7 +3,6 @@ package pkg
 import (
 	"bytes"
 	"database/sql"
-	"encoding/gob"
 	"time"
 )
 
@@ -116,14 +115,4 @@ func (bd BaseDomain) GetUpdatedAt() time.Time {
 
 func (bd BaseDomain) GetDeletedAt() time.Time {
 	return *bd.DeletedAt
-}
-
-func (bd BaseDomain) FromBytes(byteBuffer *bytes.Buffer, entityCreator EntityCreator) (Base, error) {
-	dec := gob.NewDecoder(byteBuffer)
-	entity := entityCreator()
-	err := dec.Decode(entity)
-	if err != nil {
-		return nil, err
-	}
-	return entity, nil
 }
