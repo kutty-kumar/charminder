@@ -3,6 +3,7 @@ package pkg
 import (
 	"bytes"
 	"database/sql"
+	"encoding/gob"
 	"time"
 )
 
@@ -69,6 +70,7 @@ type Base interface {
 	ToBytes() (*bytes.Buffer, error)
 	ToJson() (string, error)
 	String() string
+	FromBytes(buffer *bytes.Buffer, entityCreator EntityCreator) (Base, error)
 }
 
 type Attribute interface {
@@ -114,4 +116,14 @@ func (bd BaseDomain) GetUpdatedAt() time.Time {
 
 func (bd BaseDomain) GetDeletedAt() time.Time {
 	return *bd.DeletedAt
+}
+
+func (bd BaseDomain) FromBytes(byteBuffer *bytes.Buffer, entityCreator EntityCreator) (Base, error) {
+	dec := gob.NewDecoder(byteBuffer)
+	entity := entityCreator()
+	err := dec.Decode(entity)
+	if err != nil {
+		return nil, err
+	}
+	return entity, nil
 }
