@@ -1,7 +1,6 @@
 package pkg
 
 import (
-	"bytes"
 	"database/sql"
 	"time"
 )
@@ -66,10 +65,10 @@ type Base interface {
 	Merge(other interface{})
 	FromSqlRow(rows *sql.Rows) (Base, error)
 	SetExternalId(externalId string)
-	ToBytes() (*bytes.Buffer, error)
+	ToBytes() ([]byte, error)
 	ToJson() (string, error)
 	String() string
-	FromBytes(buffer *bytes.Buffer, entityCreator EntityCreator) (Base, error)
+	FromBytes(buffer []byte) (Base, error)
 }
 
 type Attribute interface {
