@@ -65,10 +65,10 @@ type Base interface {
 	Merge(other interface{})
 	FromSqlRow(rows *sql.Rows) (Base, error)
 	SetExternalId(externalId string)
-	ToBytes() ([]byte, error)
+	MarshalBinary() ([]byte, error)
 	ToJson() (string, error)
 	String() string
-	FromBytes(buffer []byte) (Base, error)
+	UnmarshalBinary(buffer []byte) error
 }
 
 type Attribute interface {
