@@ -6,30 +6,31 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/spf13/viper"
 	"io"
 	"time"
 )
+
+type JwtConfig struct {
+	CipherKey                string
+	SecretKey                string
+	AccessKeyExpiryTimeUnit  time.Duration
+	RefreshKeyExpiryTimeUnit time.Duration
+}
 
 type Claims struct {
 	EntityId string
 	jwt.StandardClaims
 }
 
-const (
-	accessTokenExpiryTimeUnit  = time.Hour
-	refreshTokenExpiryTimeUnit = time.Hour
-)
-
 type AuthHelper struct {
 }
 
-func (ah *AuthHelper) GenerateAccessRefreshKeyPair(userId string) (map[string]string, error) {
-	accessToken, err := ah.createToken(userId, time.Now().Add(time.Duration(viper.GetInt("jwt_config.access_token_expiry_duration"))*accessTokenExpiryTimeUnit))
+func (ah *AuthHelper) GenerateAccessRefreshKeyPair(jwtConfig *JwtConfig, userId string) (map[string]string, error) {
+	accessToken, err := ah.createToken(jwtConfig, userId, time.Now().Add(jwtConfig.AccessKeyExpiryTimeUnit))
 	if err != nil {
 		return nil, err
 	}
-	refreshToken, err := ah.createToken(userId, time.Now().Add(time.Duration(viper.GetInt("jwt_config.refresh_token_expiry_duration"))*refreshTokenExpiryTimeUnit))
+	refreshToken, err := ah.createToken(jwtConfig, userId, time.Now().Add(jwtConfig.RefreshKeyExpiryTimeUnit))
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +40,7 @@ func (ah *AuthHelper) GenerateAccessRefreshKeyPair(userId string) (map[string]st
 	}, nil
 }
 
-func (ah *AuthHelper) createToken(userId string, expirationTime time.Time) (string, error) {
+func (ah *AuthHelper) createToken(jwtConfig *JwtConfig, userId string, expirationTime time.Time) (string, error) {
 	var err error
 	claims := &Claims{
 		EntityId: userId,
@@ -48,17 +49,17 @@ func (ah *AuthHelper) createToken(userId string, expirationTime time.Time) (stri
 		},
 	}
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	token, err := at.SignedString([]byte(viper.GetString("jwt_config.secret_key")))
+	token, err := at.SignedString([]byte(jwtConfig.SecretKey))
 	if err != nil {
 		return "", err
 	}
 	return token, nil
 }
 
-func (ah *AuthHelper) ValidateTokenExpiry(token string) (*Claims, bool) {
+func (ah *AuthHelper) ValidateTokenExpiry(jwtConfig *JwtConfig, token string) (*Claims, bool) {
 	claims := &Claims{}
 	at, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(viper.GetString("jwt_config.secret_key")), nil
+		return []byte(jwtConfig.SecretKey), nil
 	})
 	if err != nil || !at.Valid {
 		return nil, false
@@ -66,9 +67,9 @@ func (ah *AuthHelper) ValidateTokenExpiry(token string) (*Claims, bool) {
 	return claims, true
 }
 
-func (ah *AuthHelper) EncryptAES(text string) (string, error) {
+func (ah *AuthHelper) EncryptAES(jwtConfig *JwtConfig, text string) (string, error) {
 	textInBytes := []byte(text)
-	block, err := aes.NewCipher([]byte(viper.GetString("jwt_config.cipher_key")))
+	block, err := aes.NewCipher([]byte(jwtConfig.CipherKey))
 	if err != nil {
 		return "", err
 	}
