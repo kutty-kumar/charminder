@@ -10,27 +10,25 @@ import (
 	"time"
 )
 
-type JwtConfig struct {
-	CipherKey                string
-	SecretKey                string
-	AccessKeyExpiryTimeUnit  time.Duration
-	RefreshKeyExpiryTimeUnit time.Duration
-}
-
 type Claims struct {
-	EntityId string
+	UserId string `json:"user_id"`
 	jwt.StandardClaims
 }
 
-type AuthHelper struct {
-}
-
-func (ah *AuthHelper) GenerateAccessRefreshKeyPair(jwtConfig *JwtConfig, userId string) (map[string]string, error) {
-	accessToken, err := ah.createToken(jwtConfig, userId, time.Now().Add(jwtConfig.AccessKeyExpiryTimeUnit))
+func GenerateAccessRefreshKeyPair(accessTokenDuration, refreshTokenDuration string, secretKey string, userId string) (map[string]string, error) {
+	accessTokenExp, err := time.ParseDuration(accessTokenDuration)
 	if err != nil {
 		return nil, err
 	}
-	refreshToken, err := ah.createToken(jwtConfig, userId, time.Now().Add(jwtConfig.RefreshKeyExpiryTimeUnit))
+	refreshTokenExp, err := time.ParseDuration(refreshTokenDuration)
+	if err != nil {
+		return nil, err
+	}
+	accessToken, err := createToken(userId, secretKey, time.Now().Add(accessTokenExp))
+	if err != nil {
+		return nil, err
+	}
+	refreshToken, err := createToken(userId, secretKey, time.Now().Add(refreshTokenExp))
 	if err != nil {
 		return nil, err
 	}
@@ -40,26 +38,26 @@ func (ah *AuthHelper) GenerateAccessRefreshKeyPair(jwtConfig *JwtConfig, userId 
 	}, nil
 }
 
-func (ah *AuthHelper) createToken(jwtConfig *JwtConfig, userId string, expirationTime time.Time) (string, error) {
+func createToken(userId, secretKey string, expirationTime time.Time) (string, error) {
 	var err error
 	claims := &Claims{
-		EntityId: userId,
+		UserId: userId,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
 	}
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	token, err := at.SignedString([]byte(jwtConfig.SecretKey))
+	token, err := at.SignedString([]byte(secretKey))
 	if err != nil {
 		return "", err
 	}
 	return token, nil
 }
 
-func (ah *AuthHelper) ValidateTokenExpiry(jwtConfig *JwtConfig, token string) (*Claims, bool) {
+func ValidateTokenExpiry(secretKey string, token string) (*Claims, bool) {
 	claims := &Claims{}
 	at, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(jwtConfig.SecretKey), nil
+		return []byte(secretKey), nil
 	})
 	if err != nil || !at.Valid {
 		return nil, false
@@ -67,9 +65,9 @@ func (ah *AuthHelper) ValidateTokenExpiry(jwtConfig *JwtConfig, token string) (*
 	return claims, true
 }
 
-func (ah *AuthHelper) EncryptAES(jwtConfig *JwtConfig, text string) (string, error) {
+func EncryptAES(cipherKey, text string) (string, error) {
 	textInBytes := []byte(text)
-	block, err := aes.NewCipher([]byte(jwtConfig.CipherKey))
+	block, err := aes.NewCipher([]byte(cipherKey))
 	if err != nil {
 		return "", err
 	}

@@ -7,15 +7,16 @@ import (
 )
 
 type Signer struct {
+	key string
 }
 
-func (h *Signer) GenerateSignature(jwtConfig *JwtConfig, key string) string {
-	signer := hmac.New(sha256.New, []byte(jwtConfig.SecretKey))
-	signer.Write([]byte(key))
+func (h *Signer) GenerateSignature(payload string) string {
+	signer := hmac.New(sha256.New, []byte(h.key))
+	signer.Write([]byte(payload))
 	return hex.EncodeToString(signer.Sum(nil))
 }
 
-func (h *Signer) ValidateSignature(jwtConfig *JwtConfig, key string, eSignature string) bool {
-	cSignature := h.GenerateSignature(jwtConfig, key)
+func (h *Signer) ValidateSignature(payload string, eSignature string) bool {
+	cSignature := h.GenerateSignature(payload)
 	return cSignature == eSignature
 }
