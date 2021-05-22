@@ -1,4 +1,4 @@
-package pkg
+package db
 
 import (
 	"context"
@@ -15,17 +15,17 @@ type GORMRepository struct {
 	db               *gorm.DB
 	creator          EntityCreator
 	externalIdSetter ExternalIdSetter
-	logger *logrus.Logger
+	logger           *logrus.Logger
 }
 
 func WithCreator(creator EntityCreator) GORMRepositoryOption {
-	return func(r *GORMRepository)	{
+	return func(r *GORMRepository) {
 		r.creator = creator
 	}
 }
 
 func WithExternalIdSetter(setter ExternalIdSetter) GORMRepositoryOption {
-	return func(r *GORMRepository){
+	return func(r *GORMRepository) {
 		r.externalIdSetter = setter
 	}
 }
@@ -42,7 +42,8 @@ func WithDb(db *gorm.DB) GORMRepositoryOption {
 	}
 }
 
-func (r *GORMRepository) GetDb() *gorm.DB {
+func (r *GORMRepository) GetDb() interface{} {
+	// users will have to cast this to *gorm.Db
 	return r.db
 }
 
@@ -83,7 +84,7 @@ func (r *GORMRepository) populateRows(rows *sql.Rows) (error, []Base) {
 	return nil, models
 }
 
-func (r *GORMRepository) MultiGetByExternalId(ctx context.Context, externalIds [] string) (error, []Base) {
+func (r *GORMRepository) MultiGetByExternalId(ctx context.Context, externalIds []string) (error, []Base) {
 	entity := r.creator()
 	rows, err := r.db.WithContext(ctx).Table(string(entity.GetName())).Where("external_id IN (?)", externalIds).Rows()
 	if err != nil {

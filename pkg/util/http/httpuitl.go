@@ -1,0 +1,128 @@
+package http
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"github.com/sirupsen/logrus"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"strings"
+)
+
+type HttpUtil struct {
+	Client         *http.Client
+	Logger         *logrus.Logger
+	DefaultHeaders map[string]string
+}
+
+func GetQueryParamsString(queryParams map[string]string) string {
+	var qpSlice []string
+	for key, value := range queryParams {
+		qpSlice = append(qpSlice, fmt.Sprintf("%v=%v", key, value))
+	}
+	return strings.Join(qpSlice, "&")
+}
+
+type HttpResponseMapper func(resBytes []byte) (interface{}, error)
+
+type Factory func() interface{}
+
+type ReqOption func(r *http.Request)
+
+func NewGetReq(baseUri string) (*http.Request, error) {
+	return http.NewRequest(http.MethodGet, baseUri, nil)
+}
+
+func NewPostReq(baseUri string) (*http.Request, error) {
+	return http.NewRequest(http.MethodPost, baseUri, nil)
+}
+
+func NewPutReq(baseUri string) (*http.Request, error) {
+	return http.NewRequest(http.MethodPut, baseUri, nil)
+}
+
+func NewPatchReq(baseUri string) (*http.Request, error) {
+	return http.NewRequest(http.MethodPatch, baseUri, nil)
+}
+
+func WithQueryParams(queryParams map[string]string) ReqOption {
+	return func(r *http.Request) {
+		qStr := GetQueryParamsString(queryParams)
+		if len(qStr) > 0 {
+			r.RequestURI += "?" + qStr
+		}
+	}
+}
+
+func WithHeaders(headers map[string][]string) ReqOption {
+	return func(r *http.Request) {
+		for key, value := range headers {
+			r.Header[key] = value
+		}
+	}
+}
+
+func WithBody(bodyFactory func() []byte) ReqOption {
+	return func(r *http.Request) {
+		reqBytes := bodyFactory()
+		r.GetBody = func() (io.ReadCloser, error) {
+			rBytes := bytes.NewReader(reqBytes)
+			return ioutil.NopCloser(rBytes), nil
+		}
+	}
+}
+
+func (hul *HttpUtil) DoOperation(req *http.Request, factoryFunc Factory, reqOptions ...ReqOption) error {
+	for _, option := range reqOptions {
+		option(req)
+	}
+	resp, err := hul.Client.Do(req)
+	if err != nil {
+		return err
+	}
+	respBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	entity := factoryFunc()
+	err = json.Unmarshal(respBytes, entity)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (hul *HttpUtil) unmarshal(factoryFunc Factory, response *http.Response) error {
+	defer response.Body.Close()
+	respBytes, err := ioutil.ReadAll(response.Body)
+	entity := factoryFunc()
+	err = json.Unmarshal(respBytes, entity)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (hul *HttpUtil) DoGet(uri string, factoryFunc Factory, reqOptions ...ReqOption) error {
+	req, err := NewGetReq(uri)
+	for _, option := range reqOptions {
+		option(req)
+	}
+	resp, err := hul.Client.Do(req)
+	defer resp.Body.Close()
+	if err != nil {
+		return err
+	}
+	return hul.unmarshal(factoryFunc, resp)
+}
+
+func (hul *HttpUtil) DoPost(uri string, factoryFunc Factory, bodyFunc func() []byte, reqOptions ...ReqOption) error {
+	res, err := hul.Client.Post(uri, "application/json", bytes.NewBuffer(bodyFunc()))
+	if err != nil {
+		return err
+	}
+
+	return hul.unmarshal(factoryFunc, res)
+}
