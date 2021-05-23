@@ -27,29 +27,38 @@ type FieldAnalysis struct {
 	SearchAnalyzer string
 }
 
+func (f *FieldAnalysis) String() string {
+	return fmt.Sprintf("{\"analyzer\":\"%v\", \"search_analyzer\":\"%v\"}", f.Analyzer, f.SearchAnalyzer)
+}
+
 type Identity struct {
-	Key   string `json:"name:key"`
-	Value string `json:"name:value"`
+	Key   string `json:"name:key;analyzer:my_analyzer;search_analyzer:my_analyzer"`
+	Value string `json:"name:value;analyzer:my_analyzer;search_analyzer:my_analyzer"`
+}
+
+type Test struct {
+	TestName string `json:"test_name;analyzer:my_analyzer;search_analyzer:my_analyzer"`
 }
 
 type Location struct {
-	Name     string   `json:"name"`
-	ZipCodes []string `json:"zip_codes"`
+	Name     string   `json:"name;analyzer:my_analyzer;search_analyzer:my_analyzer"`
+	ZipCodes []string `json:"zip_codes;analyzer:my_analyzer;search_analyzer:my_analyzer"`
+	Test     Test     `json:"test"`
 }
 
 type University struct {
-	Name     string   `json:"name"`
+	Name     string   `json:"name;analyzer:my_analyzer;search_analyzer:my_analyzer"`
 	Location Location `json:"location"`
-	Credits  []string `json:"credits"`
+	Credits  []string `json:"credits;analyzer:my_analyzer;search_analyzer:my_analyzer"`
 }
 
 type Student struct {
 	Fname             string     `json:"name:f_name;analyzer:my_analyzer;search_analyzer:my_analyzer"`
-	Lname             string     `json:"name:l_name"`
-	City              string     `json:"name:city"`
-	Mobile            string     `json:"name:mobile"`
+	Lname             string     `json:"name:l_name;analyzer:my_analyzer;search_analyzer:my_analyzer"`
+	City              string     `json:"name:city;analyzer:my_analyzer;search_analyzer:my_analyzer"`
+	Mobile            string     `json:"name:mobile;analyzer:my_analyzer;search_analyzer:my_analyzer"`
 	Identities        []Identity `json:"name:identities"`
-	Courses           []string   `json:"courses"`
+	Courses           []string   `json:"courses;analyzer:my_analyzer;search_analyzer:my_analyzer"`
 	CurrentUniversity University `json:"current_university"`
 }
 
@@ -93,27 +102,33 @@ func GetMappingForSlice(w reflect.Type, parentPath string) string {
 		if w.Field(j).Type.Kind() != reflect.Struct && w.Field(j).Type.Kind() != reflect.Slice && w.Field(j).Type.Kind() != reflect.Chan {
 			if w.Field(j).Type.Kind() == reflect.String {
 				mappings = append(mappings, fmt.Sprintf("   \"%v\": {\n     \"type\": \"%v\"\n, \"fields\": {\n\"keyword\": {\n \"type\": \"keyword\"} } }", toSnakeCase(w.Field(j).Name), kindStr[w.Field(j).Type.Kind()]))
-				attrName := fmt.Sprintf("%v.%v", toSnakeCase(parentPath), toSnakeCase(w.Field(j).Name))
+				attrName := fmt.Sprintf("%v.%v", parentPath, toSnakeCase(w.Field(j).Name))
 				searchableFields = append(searchableFields, attrName)
 				fieldMappings[attrName] = FieldAnalysis{
 					Analyzer:       getTagValue(w.Field(j).Tag.Get("json"), "analyzer"),
-					SearchAnalyzer: getTagValue(w.Field(j).Tag.Get("json"), "search_analyser"),
+					SearchAnalyzer: getTagValue(w.Field(j).Tag.Get("json"), "search_analyzer"),
 				}
 			} else {
 				mappings = append(mappings, fmt.Sprintf("\"%v\": {\"type\": \"%v\"}", toSnakeCase(w.Field(j).Name), kindStr[w.Field(j).Type.Kind()]))
 			}
 		} else if w.Field(j).Type.Kind() == reflect.Struct || (w.Field(j).Type.Kind() == reflect.Slice && w.Field(j).Type.Elem().Kind() == reflect.Struct) {
-			mappings = append(mappings, fmt.Sprintf("\"%v\":{\"properties\": {\n %v \n}\n}", toSnakeCase(w.Field(j).Name), GetMappingForSlice(w.Field(j).Type, fmt.Sprintf("%v.%v", parentPath, w.Field(j).Name))))
+			mappings = append(mappings, fmt.Sprintf("\"%v\":{\"properties\": {\n %v \n}\n}", toSnakeCase(w.Field(j).Name), GetMappingForSlice(w.Field(j).Type, fmt.Sprintf("%v.%v", parentPath, toSnakeCase(w.Field(j).Name)))))
 		} else if w.Field(j).Type.Kind() == reflect.Slice && (w.Field(j).Type.Elem().Kind() != reflect.Struct && w.Field(j).Type.Elem().Kind() != reflect.Chan) {
 			if w.Field(j).Type.Kind() == reflect.String {
-				attrName := fmt.Sprintf("%v.%v", toSnakeCase(parentPath), toSnakeCase(w.Field(j).Name))
+				attrName := fmt.Sprintf("%v.%v", parentPath, toSnakeCase(w.Field(j).Name))
 				searchableFields = append(searchableFields, attrName)
 				fieldMappings[attrName] = FieldAnalysis{
 					Analyzer:       getTagValue(w.Field(j).Tag.Get("json"), "analyzer"),
-					SearchAnalyzer: getTagValue(w.Field(j).Tag.Get("json"), "search_analyser"),
+					SearchAnalyzer: getTagValue(w.Field(j).Tag.Get("json"), "search_analyzer"),
 				}
 				mappings = append(mappings, fmt.Sprintf("   \"%v\": {\n     \"type\": \"%v\"\n, \"fields\": {\n\"keyword\": {\n \"type\": \"keyword\"} } }", toSnakeCase(w.Field(j).Name), kindStr[w.Field(j).Type.Kind()]))
 			} else {
+				attrName := fmt.Sprintf("%v.%v", parentPath, toSnakeCase(w.Field(j).Name))
+				searchableFields = append(searchableFields, attrName)
+				fieldMappings[attrName] = FieldAnalysis{
+					Analyzer:       getTagValue(w.Field(j).Tag.Get("json"), "analyzer"),
+					SearchAnalyzer: getTagValue(w.Field(j).Tag.Get("json"), "search_analyzer"),
+				}
 				mappings = append(mappings, fmt.Sprintf("\"%v\": {\"type\": \"%v\"}", toSnakeCase(w.Field(j).Name), kindStr[w.Field(j).Type.Elem().Kind()]))
 			}
 		}
@@ -132,7 +147,7 @@ func GetMapping(v reflect.Value) string {
 				searchableFields = append(searchableFields, attrName)
 				fieldMappings[attrName] = FieldAnalysis{
 					Analyzer:       getTagValue(valType.Field(i).Tag.Get("json"), "analyzer"),
-					SearchAnalyzer: getTagValue(valType.Field(i).Tag.Get("json"), "search_analyser"),
+					SearchAnalyzer: getTagValue(valType.Field(i).Tag.Get("json"), "search_analyz	er"),
 				}
 				mappings = append(mappings, fmt.Sprintf("   \"%v\": {\n     \"type\": \"%v\"\n, \"fields\": {\n\"keyword\": {\n \"type\": \"keyword\"} } }", toSnakeCase(valType.Field(i).Name), kindStr[attr.Kind()]))
 			} else {
@@ -142,16 +157,22 @@ func GetMapping(v reflect.Value) string {
 			attrType := reflect.TypeOf(attr.Interface()).Elem().Kind()
 			if attrType != reflect.Struct {
 				if attrType == reflect.String {
+					attrName := toSnakeCase(valType.Field(i).Name)
 					mappings = append(mappings, fmt.Sprintf("   \"%v\": {\n     \"type\": \"%v\"\n, \"fields\": {\n\"keyword\": {\n \"type\": \"keyword\"} } }", toSnakeCase(valType.Field(i).Name), kindStr[attr.Kind()]))
+					searchableFields = append(searchableFields, attrName)
+					fieldMappings[attrName] = FieldAnalysis{
+						Analyzer:       getTagValue(valType.Field(i).Tag.Get("json"), "analyzer"),
+						SearchAnalyzer: getTagValue(valType.Field(i).Tag.Get("json"), "search_analyzer"),
+					}
 				} else {
 					mappings = append(mappings, fmt.Sprintf("   \"%v\": {\n     \"type\": \"%v\"\n   }", toSnakeCase(valType.Field(i).Name), kindStr[attrType]))
 				}
 			} else {
 				sFace := reflect.TypeOf(attr.Interface()).Elem()
-				mappings = append(mappings, fmt.Sprintf("\"%v\":{\n    \"properties\":    {\n %v }\n  }", toSnakeCase(valType.Field(i).Name), GetMappingForSlice(sFace, valType.Field(i).Name)))
+				mappings = append(mappings, fmt.Sprintf("\"%v\":{\n    \"properties\":    {\n %v }\n  }", toSnakeCase(valType.Field(i).Name), GetMappingForSlice(sFace, toSnakeCase(valType.Field(i).Name))))
 			}
 		} else if attr.Kind() == reflect.Struct {
-			mappings = append(mappings, fmt.Sprintf("\"%v\":{\n    \"properties\":    {\n %v }\n  }", toSnakeCase(valType.Field(i).Name), GetMappingForSlice(reflect.TypeOf(attr.Interface()), valType.Field(i).Name)))
+			mappings = append(mappings, fmt.Sprintf("\"%v\":{\n    \"properties\":    {\n %v }\n  }", toSnakeCase(valType.Field(i).Name), GetMappingForSlice(reflect.TypeOf(attr.Interface()), toSnakeCase(valType.Field(i).Name))))
 		}
 	}
 	return "{\n \"mappings\":{ \n  \"properties\":{\n" + strings.Join(mappings, ",\n") + "\n  }\n }\n}"
@@ -166,6 +187,9 @@ func main() {
 		Location{
 			"New York",
 			[]string{"560073"},
+			Test{
+				TestName: "Test name",
+			},
 		},
 		[]string{"1"},
 	}}
@@ -208,4 +232,7 @@ func main() {
 	}
 	fmt.Printf("Settings %v\n", string(settingsJson))
 	fmt.Printf("Searchable felds %v\n", searchableFields)
+	for field, mapping := range fieldMappings {
+		fmt.Println(fmt.Sprintf("%v %v %v", field, mapping.Analyzer, mapping.SearchAnalyzer))
+	}
 }
