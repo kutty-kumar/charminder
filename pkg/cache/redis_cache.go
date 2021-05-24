@@ -1,8 +1,8 @@
 package cache
 
 import (
-	"charminder/pkg/db"
 	"github.com/go-redis/redis"
+	"github.com/kutty-kumar/charminder/pkg/db"
 	"github.com/sirupsen/logrus"
 	"time"
 )

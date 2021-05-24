@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"charminder/pkg/db"
+	"github.com/kutty-kumar/charminder/pkg/db"
 	"time"
 )
 
