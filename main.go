@@ -1,11 +1,11 @@
 package main
 
 import (
-	"charminder/pkg/db"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/kutty-kumar/charminder/pkg/db"
 	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
