@@ -544,6 +544,7 @@ func (esr *ElasticsearchRepo) IndexMappings(ctx context.Context) error {
 	}
 	mapping["settings"] = esr.settings
 	mappingStr, err := json.Marshal(mapping)
+	esr.logger.Infof("Mappings %v", mappingStr)
 	if err != nil {
 		log.Fatalf("An error %v occurred while marshalling mapping to json", err)
 	}
