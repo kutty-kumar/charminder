@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 )
 
@@ -83,13 +84,20 @@ type AttributeWithLanguage interface {
 
 type ExternalIdSetter func(externalId string, base Base) Base
 
+type ETime time.Time
+
+func (et ETime) MarshalJSON() ([]byte, error) {
+	stamp := fmt.Sprintf("\"%v\"", time.Time(et).Format(time.RFC3339))
+	return []byte(stamp), nil
+}
+
 type BaseDomain struct {
-	ExternalId string     `json:"external_id" gorm:"type:varchar(100);uniqueIndex"`
-	Id         uint64     `json:"id" gorm:"primaryKey"`
-	CreatedAt  *time.Time `json:"created_at" type:"date"`
-	UpdatedAt  *time.Time `type:"date"`
-	DeletedAt  *time.Time `type:"date"`
-	Status     int        `type:"int"`
+	ExternalId string `json:"external_id" gorm:"type:varchar(100);uniqueIndex"`
+	Id         uint64 `json:"id" gorm:"primaryKey"`
+	CreatedAt  ETime  `json:"created_at" type:"date"`
+	UpdatedAt  ETime  `type:"date"`
+	DeletedAt  ETime  `type:"date"`
+	Status     int    `type:"int"`
 }
 
 func (bd BaseDomain) GetExternalId() string {
@@ -105,13 +113,13 @@ func (bd BaseDomain) GetStatus() Status {
 }
 
 func (bd BaseDomain) GetCreatedAt() time.Time {
-	return *bd.CreatedAt
+	return time.Time(bd.CreatedAt)
 }
 
 func (bd BaseDomain) GetUpdatedAt() time.Time {
-	return *bd.UpdatedAt
+	return time.Time(bd.UpdatedAt)
 }
 
 func (bd BaseDomain) GetDeletedAt() time.Time {
-	return *bd.DeletedAt
+	return time.Time(bd.DeletedAt)
 }

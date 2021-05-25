@@ -129,13 +129,13 @@ func NewStudent() Student {
 		},
 		[]string{"1"},
 	}
-	timeNow := time.Now()
+	timeNow := db.ETime(time.Now())
 	s.BaseDomain = db.BaseDomain{
 		ExternalId: "",
 		Id:         0,
-		CreatedAt:  &timeNow,
-		UpdatedAt:  &timeNow,
-		DeletedAt:  &timeNow,
+		CreatedAt:  timeNow,
+		UpdatedAt:  timeNow,
+		DeletedAt:  timeNow,
 		Status:     0,
 	}
 	return s
