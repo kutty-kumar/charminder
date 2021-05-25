@@ -221,12 +221,18 @@ func (esr *ElasticsearchRepo) getMappingForSlice(w reflect.Type, parentPath stri
 			} else {
 				if w.Field(j).Type.Kind() == reflect.Ptr {
 					mappings = append(mappings, fmt.Sprintf("\"%v\": {\"type\": \"%v\"}", toSnakeCase(w.Field(j).Name), w.Field(j).Tag.Get("type")))
+				} else if w.Field(j).Tag.Get("type") != "" {
+					mappings = append(mappings, fmt.Sprintf("\"%v\": {\"type\": \"%v\"}", toSnakeCase(w.Field(j).Name), w.Field(j).Tag.Get("type")))
 				} else {
 					mappings = append(mappings, fmt.Sprintf("\"%v\": {\"type\": \"%v\"}", toSnakeCase(w.Field(j).Name), kindStr[w.Field(j).Type.Kind()]))
 				}
 			}
 		} else if w.Field(j).Type.Kind() == reflect.Struct || (w.Field(j).Type.Kind() == reflect.Slice && w.Field(j).Type.Elem().Kind() == reflect.Struct) {
-			mappings = append(mappings, fmt.Sprintf("\"%v\":{\"properties\": {\n %v \n}\n}", toSnakeCase(w.Field(j).Name), esr.getMappingForSlice(w.Field(j).Type, fmt.Sprintf("%v.%v", parentPath, toSnakeCase(w.Field(j).Name)))))
+			if w.Field(j).Tag.Get("type") != "" {
+				mappings = append(mappings, fmt.Sprintf("\"%v\": {\"type\": \"%v\"}", toSnakeCase(w.Field(j).Name), w.Field(j).Tag.Get("type")))
+			} else {
+				mappings = append(mappings, fmt.Sprintf("\"%v\":{\"properties\": {\n %v \n}\n}", toSnakeCase(w.Field(j).Name), esr.getMappingForSlice(w.Field(j).Type, fmt.Sprintf("%v.%v", parentPath, toSnakeCase(w.Field(j).Name)))))
+			}
 		} else if w.Field(j).Type.Kind() == reflect.Slice && (w.Field(j).Type.Elem().Kind() != reflect.Struct && w.Field(j).Type.Elem().Kind() != reflect.Chan) {
 			if w.Field(j).Type.Kind() == reflect.String {
 				attrName := fmt.Sprintf("%v.%v", parentPath, toSnakeCase(w.Field(j).Name))
