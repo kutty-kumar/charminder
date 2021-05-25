@@ -20,13 +20,16 @@ import (
 
 var (
 	kindStr = map[reflect.Kind]string{
-		reflect.String: "text",
-		reflect.Int64:  "long",
-		reflect.Int32:  "integer",
-		reflect.Bool:   "bool",
-		reflect.Uint64: "long",
-		reflect.Slice:  "nested",
-		reflect.Struct: "nested",
+		reflect.String:  "text",
+		reflect.Int64:   "long",
+		reflect.Int32:   "integer",
+		reflect.Bool:    "bool",
+		reflect.Uint64:  "long",
+		reflect.Slice:   "nested",
+		reflect.Struct:  "nested",
+		reflect.Float64: "float",
+		reflect.Float32: "float",
+		reflect.Int:     "integer",
 	}
 )
 
@@ -216,7 +219,11 @@ func (esr *ElasticsearchRepo) getMappingForSlice(w reflect.Type, parentPath stri
 					SearchAnalyzer: w.Field(j).Tag.Get("search_analyzer"),
 				}
 			} else {
-				mappings = append(mappings, fmt.Sprintf("\"%v\": {\"type\": \"%v\"}", toSnakeCase(w.Field(j).Name), kindStr[w.Field(j).Type.Kind()]))
+				if w.Field(j).Type.Kind() == reflect.Ptr {
+					mappings = append(mappings, fmt.Sprintf("\"%v\": {\"type\": \"%v\"}", toSnakeCase(w.Field(j).Name), w.Field(j).Tag.Get("type")))
+				} else {
+					mappings = append(mappings, fmt.Sprintf("\"%v\": {\"type\": \"%v\"}", toSnakeCase(w.Field(j).Name), kindStr[w.Field(j).Type.Kind()]))
+				}
 			}
 		} else if w.Field(j).Type.Kind() == reflect.Struct || (w.Field(j).Type.Kind() == reflect.Slice && w.Field(j).Type.Elem().Kind() == reflect.Struct) {
 			mappings = append(mappings, fmt.Sprintf("\"%v\":{\"properties\": {\n %v \n}\n}", toSnakeCase(w.Field(j).Name), esr.getMappingForSlice(w.Field(j).Type, fmt.Sprintf("%v.%v", parentPath, toSnakeCase(w.Field(j).Name)))))
@@ -234,7 +241,7 @@ func (esr *ElasticsearchRepo) getMappingForSlice(w reflect.Type, parentPath stri
 					Analyzer:       w.Field(j).Tag.Get("analyzer"),
 					SearchAnalyzer: w.Field(j).Tag.Get("search_analyzer"),
 				}
-				mappings = append(mappings, fmt.Sprintf("\"%v\": {\"type\": \"%v\"}", toSnakeCase(w.Field(j).Name), w.Field(j).Type.Elem().Kind()))
+				mappings = append(mappings, fmt.Sprintf("\"%v\": {\"type\": \"%v\"}", toSnakeCase(w.Field(j).Name), w.Field(j).Tag.Get("type")))
 			}
 		}
 	}
@@ -268,7 +275,7 @@ func (esr *ElasticsearchRepo) getMapping(v reflect.Value) string {
 						SearchAnalyzer: valType.Field(i).Tag.Get("search_analyzer"),
 					}
 				} else {
-					mappings = append(mappings, fmt.Sprintf("   \"%v\": {\n     \"type\": \"%v\"\n   }", toSnakeCase(valType.Field(i).Name), attrType))
+					mappings = append(mappings, fmt.Sprintf("   \"%v\": {\n     \"type\": \"%v\"\n   }", toSnakeCase(valType.Field(i).Name), kindStr[attrType]))
 				}
 			} else {
 				sFace := reflect.TypeOf(attr.Interface()).Elem()

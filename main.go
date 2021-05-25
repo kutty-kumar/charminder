@@ -23,17 +23,18 @@ type Test struct {
 
 type Location struct {
 	Name     string   `analyzer:"my_analyzer" search_analyzer:"my_analyzer"`
-	ZipCodes []string `json:"zip_codes" analyzer:"my_analyzer" search_analyzer:"my_analyzer"`
+	ZipCodes []string `json:"zip_codes" analyzer:"my_analyzer" search_analyzer:"my_analyzer" type:"text"`
 	Test     Test     `json:"test"`
 }
 
 type University struct {
 	Name     string   `json:"name" analyzer:"my_analyzer" search_analyzer:"my_analyzer"`
 	Location Location `json:"location"`
-	Credits  []string `json:"credits" analyzer:"my_analyzer" search_analyzer:"my_analyzer"`
+	Credits  []string `json:"credits" analyzer:"my_analyzer" search_analyzer:"my_analyzer" type:"text"`
 }
 
 type Student struct {
+	db.BaseDomain
 	Fname             string     `json:"f_name" analyzer:"my_analyzer" search_analyzer:"my_analyzer"`
 	Lname             string     `json:"l_name" analyzer:"my_analyzer" search_analyzer:"my_analyzer"`
 	City              string     `json:"city" analyzer:"my_analyzer" search_analyzer:"my_analyzer"`
@@ -127,6 +128,15 @@ func NewStudent() Student {
 			},
 		},
 		[]string{"1"},
+	}
+	timeNow := time.Now()
+	s.BaseDomain = db.BaseDomain{
+		ExternalId: "",
+		Id:         0,
+		CreatedAt:  &timeNow,
+		UpdatedAt:  &timeNow,
+		DeletedAt:  &timeNow,
+		Status:     0,
 	}
 	return s
 }

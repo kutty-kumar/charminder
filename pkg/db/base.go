@@ -84,12 +84,12 @@ type AttributeWithLanguage interface {
 type ExternalIdSetter func(externalId string, base Base) Base
 
 type BaseDomain struct {
-	ExternalId string `gorm:"type:varchar(100);uniqueIndex"`
-	Id         uint64 `gorm:"primaryKey"`
-	CreatedAt  *time.Time
-	UpdatedAt  *time.Time
-	DeletedAt  *time.Time
-	Status     int
+	ExternalId string     `json:"external_id" gorm:"type:varchar(100);uniqueIndex"`
+	Id         uint64     `json:"id" gorm:"primaryKey"`
+	CreatedAt  *time.Time `json:"created_at" type:"date"`
+	UpdatedAt  *time.Time `type:"date"`
+	DeletedAt  *time.Time `type:"date"`
+	Status     int        `type:"int"`
 }
 
 func (bd BaseDomain) GetExternalId() string {
