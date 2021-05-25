@@ -544,11 +544,11 @@ func (esr *ElasticsearchRepo) IndexMappings(ctx context.Context) error {
 	}
 	mapping["settings"] = esr.settings
 	mappingStr, err := json.Marshal(mapping)
-	esr.logger.Infof("Mappings %v", mappingStr)
+	esr.logger.Infof("Mappings %v", string(mappingStr))
 	if err != nil {
 		log.Fatalf("An error %v occurred while marshalling mapping to json", err)
 	}
-	req, err := http.NewRequest(http.MethodPut, "http://localhost:9200/students", bytes.NewBuffer(mappingStr))
+	req, err := http.NewRequest(http.MethodPut, "http://localhost:9200/"+esr.index, bytes.NewBuffer(mappingStr))
 	if err != nil {
 		return err
 	}
