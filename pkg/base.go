@@ -1,4 +1,4 @@
-package db
+package pkg
 
 import (
 	"database/sql"
@@ -114,4 +114,13 @@ func (bd BaseDomain) GetUpdatedAt() time.Time {
 
 func (bd BaseDomain) GetDeletedAt() time.Time {
 	return *bd.DeletedAt
+}
+
+type Event interface {
+	GetEntityId() string
+	GetEntityType() string
+	GetId() string
+	ToBytes() []byte
+	FromByte(bytes []byte)
+	Entity() interface{}
 }
