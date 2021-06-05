@@ -2,6 +2,8 @@ package pkg
 
 import (
 	"database/sql"
+	"database/sql/driver"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -89,6 +91,30 @@ type ETime time.Time
 func (et ETime) MarshalJSON() ([]byte, error) {
 	stamp := fmt.Sprintf("\"%v\"", time.Time(et).Format(time.RFC3339))
 	return []byte(stamp), nil
+}
+
+func (et *ETime) Value() (driver.Value, error) {
+	if &et == nil {
+		return nil, nil
+	}
+	return fmt.Sprintf("\"%v\"", time.Time(*et).Format(time.RFC3339)), nil
+}
+
+func (et *ETime) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+	s, ok := value.([]byte)
+	if !ok {
+		return errors.New("invalid scan source")
+	}
+	eTime, err := time.Parse(time.RFC3339, string(s))
+	if err != nil {
+		return err
+	}
+	x := ETime(eTime)
+	et = &x
+	return nil
 }
 
 type BaseDomain struct {
