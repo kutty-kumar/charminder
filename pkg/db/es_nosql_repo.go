@@ -9,6 +9,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"github.com/gobeam/stringy"
+	"github.com/kutty-kumar/charminder/pkg"
 	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
@@ -298,11 +299,11 @@ type ElasticsearchRepo struct {
 	marshaller      *HttpBodyUtil
 	client          *elasticsearch.Client
 	sChecker        *HttpStatusChecker
-	entityCreator   EntityCreator
+	entityCreator   pkg.EntityCreator
 	index           string
-	entityConverter func(from map[string]interface{}) Base
+	entityConverter func(from map[string]interface{}) pkg.Base
 	fieldMappings   map[string]FieldAnalysis
-	defaultEntity   Base
+	defaultEntity   pkg.Base
 	logger          *logrus.Logger
 	settings        Settings
 	httpClient      *http.Client
@@ -346,19 +347,19 @@ func WithSettings(settings Settings) ElasticsearchRepoOption {
 	}
 }
 
-func WithDefaultEntity(base Base) ElasticsearchRepoOption {
+func WithDefaultEntity(base pkg.Base) ElasticsearchRepoOption {
 	return func(repo *ElasticsearchRepo) {
 		repo.defaultEntity = base
 	}
 }
 
-func WithEntityConverter(converter func(from map[string]interface{}) Base) ElasticsearchRepoOption {
+func WithEntityConverter(converter func(from map[string]interface{}) pkg.Base) ElasticsearchRepoOption {
 	return func(repo *ElasticsearchRepo) {
 		repo.entityConverter = converter
 	}
 }
 
-func WithEntityCreator(creator EntityCreator) ElasticsearchRepoOption {
+func WithEntityCreator(creator pkg.EntityCreator) ElasticsearchRepoOption {
 	return func(repo *ElasticsearchRepo) {
 		repo.entityCreator = creator
 	}
@@ -381,7 +382,7 @@ func NewElasticsearchRepo(opts ...ElasticsearchRepoOption) BaseNoSQLRepo {
 	return repo
 }
 
-func (esr *ElasticsearchRepo) GetById(ctx context.Context, id uint64) (error, Base) {
+func (esr *ElasticsearchRepo) GetById(ctx context.Context, id uint64) (error, pkg.Base) {
 	req := esapi.SearchRequest{
 		Index: []string{esr.index},
 		Body:  strings.NewReader(fmt.Sprintf("{\"query\":{\"term\":{\"id\":%v}}}", id)),
@@ -403,7 +404,7 @@ func (esr *ElasticsearchRepo) GetById(ctx context.Context, id uint64) (error, Ba
 	return errors.New("not found"), nil
 }
 
-func (esr *ElasticsearchRepo) Search(ctx context.Context, params map[string]string) (error, []Base) {
+func (esr *ElasticsearchRepo) Search(ctx context.Context, params map[string]string) (error, []pkg.Base) {
 	var queries []string
 	for key, value := range params {
 		// supports filtering only on text fields
@@ -424,7 +425,7 @@ func (esr *ElasticsearchRepo) Search(ctx context.Context, params map[string]stri
 	if err != nil {
 		return err, nil
 	}
-	var result []Base
+	var result []pkg.Base
 	for _, hit := range response.Hits.Hits {
 		result = append(result, esr.entityConverter(hit.Source))
 	}
@@ -435,7 +436,7 @@ func (esr *ElasticsearchRepo) GetDb() interface{} {
 	return esr.client
 }
 
-func (esr *ElasticsearchRepo) ExactSearch(ctx context.Context, key string, value interface{}) (error, []Base) {
+func (esr *ElasticsearchRepo) ExactSearch(ctx context.Context, key string, value interface{}) (error, []pkg.Base) {
 	req := esapi.SearchRequest{
 		Index: []string{esr.index},
 		Body:  strings.NewReader(fmt.Sprintf("{\"query\":{\"term\":{\"%v\":%v}}}", key, value)),
@@ -451,14 +452,14 @@ func (esr *ElasticsearchRepo) ExactSearch(ctx context.Context, key string, value
 	if err != nil {
 		return err, nil
 	}
-	var result []Base
+	var result []pkg.Base
 	for _, hit := range response.Hits.Hits {
 		result = append(result, esr.entityConverter(hit.Source))
 	}
 	return nil, result
 }
 
-func (esr *ElasticsearchRepo) RangeSearch(ctx context.Context, key string, start, end interface{}) (error, []Base) {
+func (esr *ElasticsearchRepo) RangeSearch(ctx context.Context, key string, start, end interface{}) (error, []pkg.Base) {
 	queryString := fmt.Sprintf("{\"query\":{\"range\": {\"%v\": {\"gte\": %v, \"lte\": %v}}}}", key, start, end)
 	req := esapi.SearchRequest{
 		Index: []string{esr.index},
@@ -476,7 +477,7 @@ func (esr *ElasticsearchRepo) RangeSearch(ctx context.Context, key string, start
 	if err != nil {
 		return err, nil
 	}
-	var result []Base
+	var result []pkg.Base
 	for _, hit := range response.Hits.Hits {
 		result = append(result, esr.entityConverter(hit.Source))
 	}
@@ -519,7 +520,7 @@ func (esr *ElasticsearchRepo) getMultiMatchQuery(queryType, value string) string
 	return fmt.Sprintf("{ \"multi_match\": {\"query\": \"%v\", \"type\": \"%v\", \"fields\": [%v] %v}}", value, queryType, strings.Join(attrs, ","), analyzerType)
 }
 
-func (esr *ElasticsearchRepo) TextSearch(ctx context.Context, value string) (error, []Base) {
+func (esr *ElasticsearchRepo) TextSearch(ctx context.Context, value string) (error, []pkg.Base) {
 	var innerQueries []string
 	innerQueries = append(innerQueries, esr.getMultiMatchQuery("cross_fields", value))
 	innerQueries = append(innerQueries, esr.getMultiMatchQuery("best_fields", value))
@@ -541,7 +542,7 @@ func (esr *ElasticsearchRepo) TextSearch(ctx context.Context, value string) (err
 	if err != nil {
 		return err, nil
 	}
-	var result []Base
+	var result []pkg.Base
 	for _, hit := range response.Hits.Hits {
 		result = append(result, esr.entityConverter(hit.Source))
 	}
@@ -598,7 +599,7 @@ func (esr *ElasticsearchRepo) IsHealthy() bool {
 	return esResponse.IsHealthy()
 }
 
-func (esr *ElasticsearchRepo) Create(ctx context.Context, base Base) (error, Base) {
+func (esr *ElasticsearchRepo) Create(ctx context.Context, base pkg.Base) (error, pkg.Base) {
 	jBody, err := base.ToJson()
 	if err != nil {
 		return err, nil
@@ -617,7 +618,7 @@ func (esr *ElasticsearchRepo) Create(ctx context.Context, base Base) (error, Bas
 	return nil, base
 }
 
-func (esr *ElasticsearchRepo) Update(ctx context.Context, entityId string, base Base) (error, Base) {
+func (esr *ElasticsearchRepo) Update(ctx context.Context, entityId string, base pkg.Base) (error, pkg.Base) {
 	req := esapi.UpdateRequest{DocumentID: entityId, Index: base.GetExternalId()}
 	res, err := req.Do(ctx, esr.client)
 	if err != nil || esr.sChecker.IsInternalError(res.StatusCode) || esr.sChecker.IsClientError(res.StatusCode) {
@@ -626,7 +627,7 @@ func (esr *ElasticsearchRepo) Update(ctx context.Context, entityId string, base 
 	return nil, base
 }
 
-func (esr *ElasticsearchRepo) GetByExternalId(ctx context.Context, entityId string) (error, Base) {
+func (esr *ElasticsearchRepo) GetByExternalId(ctx context.Context, entityId string) (error, pkg.Base) {
 	truthy := true
 	req := esapi.GetRequest{DocumentID: entityId, Refresh: &truthy, Realtime: &truthy}
 	res, err := req.Do(ctx, esr.client)
@@ -647,7 +648,7 @@ func toSnakeCase(input string) string {
 	return stringy.New(input).SnakeCase().ToLower()
 }
 
-func (esr *ElasticsearchRepo) MultiGetByExternalId(ctx context.Context, entityIds []string) (error, []Base) {
+func (esr *ElasticsearchRepo) MultiGetByExternalId(ctx context.Context, entityIds []string) (error, []pkg.Base) {
 	var nEntityIds []string
 	for _, entityId := range entityIds {
 		nEntityIds = append(nEntityIds, fmt.Sprintf("\"%v\"", entityId))
@@ -667,7 +668,7 @@ func (esr *ElasticsearchRepo) MultiGetByExternalId(ctx context.Context, entityId
 	if err != nil {
 		return err, nil
 	}
-	var result []Base
+	var result []pkg.Base
 	for _, hit := range response.Hits.Hits {
 		result = append(result, esr.entityConverter(hit.Source))
 	}

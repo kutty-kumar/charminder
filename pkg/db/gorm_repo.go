@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/kutty-kumar/charminder/pkg"
 	"github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -13,18 +14,18 @@ type GORMRepositoryOption func(repository *GORMRepository)
 
 type GORMRepository struct {
 	db               *gorm.DB
-	creator          EntityCreator
-	externalIdSetter ExternalIdSetter
+	creator          pkg.EntityCreator
+	externalIdSetter pkg.ExternalIdSetter
 	logger           *logrus.Logger
 }
 
-func WithCreator(creator EntityCreator) GORMRepositoryOption {
+func WithCreator(creator pkg.EntityCreator) GORMRepositoryOption {
 	return func(r *GORMRepository) {
 		r.creator = creator
 	}
 }
 
-func WithExternalIdSetter(setter ExternalIdSetter) GORMRepositoryOption {
+func WithExternalIdSetter(setter pkg.ExternalIdSetter) GORMRepositoryOption {
 	return func(r *GORMRepository) {
 		r.externalIdSetter = setter
 	}
@@ -55,7 +56,7 @@ func NewGORMRepository(opts ...GORMRepositoryOption) *GORMRepository {
 	return &repo
 }
 
-func (r *GORMRepository) GetById(ctx context.Context, id uint64) (error, Base) {
+func (r *GORMRepository) GetById(ctx context.Context, id uint64) (error, pkg.Base) {
 	entity := r.creator()
 	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&entity).Error; err != nil {
 		return err, nil
@@ -63,7 +64,7 @@ func (r *GORMRepository) GetById(ctx context.Context, id uint64) (error, Base) {
 	return nil, entity
 }
 
-func (r *GORMRepository) GetByExternalId(ctx context.Context, externalId string) (error, Base) {
+func (r *GORMRepository) GetByExternalId(ctx context.Context, externalId string) (error, pkg.Base) {
 	entity := r.creator()
 	if err := r.db.WithContext(ctx).Table(string(entity.GetName())).Where("external_id = ?", externalId).First(entity).Error; err != nil {
 		return err, nil
@@ -71,8 +72,8 @@ func (r *GORMRepository) GetByExternalId(ctx context.Context, externalId string)
 	return nil, entity
 }
 
-func (r *GORMRepository) populateRows(rows *sql.Rows) (error, []Base) {
-	var models []Base
+func (r *GORMRepository) populateRows(rows *sql.Rows) (error, []pkg.Base) {
+	var models []pkg.Base
 	for rows.Next() {
 		entity := r.creator()
 		entity, err := entity.FromSqlRow(rows)
@@ -84,7 +85,7 @@ func (r *GORMRepository) populateRows(rows *sql.Rows) (error, []Base) {
 	return nil, models
 }
 
-func (r *GORMRepository) MultiGetByExternalId(ctx context.Context, externalIds []string) (error, []Base) {
+func (r *GORMRepository) MultiGetByExternalId(ctx context.Context, externalIds []string) (error, []pkg.Base) {
 	entity := r.creator()
 	rows, err := r.db.WithContext(ctx).Table(string(entity.GetName())).Where("external_id IN (?)", externalIds).Rows()
 	if err != nil {
@@ -93,7 +94,7 @@ func (r *GORMRepository) MultiGetByExternalId(ctx context.Context, externalIds [
 	return r.populateRows(rows)
 }
 
-func (r *GORMRepository) generateExternalId(base Base) (error, string) {
+func (r *GORMRepository) generateExternalId(base pkg.Base) (error, string) {
 	if base.GetExternalId() == "" {
 		uid := uuid.NewV4()
 		return nil, uid.String()
@@ -101,7 +102,7 @@ func (r *GORMRepository) generateExternalId(base Base) (error, string) {
 	return nil, base.GetExternalId()
 }
 
-func (r *GORMRepository) Create(ctx context.Context, base Base) (error, Base) {
+func (r *GORMRepository) Create(ctx context.Context, base pkg.Base) (error, pkg.Base) {
 	err, externalId := r.generateExternalId(base)
 	if err != nil {
 		return err, nil
@@ -113,7 +114,7 @@ func (r *GORMRepository) Create(ctx context.Context, base Base) (error, Base) {
 	return nil, base
 }
 
-func (r *GORMRepository) Update(ctx context.Context, externalId string, updatedBase Base) (error, Base) {
+func (r *GORMRepository) Update(ctx context.Context, externalId string, updatedBase pkg.Base) (error, pkg.Base) {
 	err, entity := r.GetByExternalId(ctx, externalId)
 	if err != nil {
 		return err, nil
@@ -125,6 +126,6 @@ func (r *GORMRepository) Update(ctx context.Context, externalId string, updatedB
 	return nil, entity
 }
 
-func (r *GORMRepository) Search(ctx context.Context, params map[string]string) (error, []Base) {
+func (r *GORMRepository) Search(ctx context.Context, params map[string]string) (error, []pkg.Base) {
 	return errors.New("not implemented"), nil
 }
