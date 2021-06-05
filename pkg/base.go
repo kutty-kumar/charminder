@@ -118,12 +118,12 @@ func (et *ETime) Scan(value interface{}) error {
 }
 
 type BaseDomain struct {
-	ExternalId string `json:"external_id" gorm:"type:varchar(100);uniqueIndex"`
-	Id         uint64 `json:"id" gorm:"primaryKey"`
-	CreatedAt  ETime  `json:"created_at" type:"date"`
-	UpdatedAt  ETime  `type:"date"`
-	DeletedAt  ETime  `type:"date"`
-	Status     int    `type:"int"`
+	ExternalId string    `json:"external_id" gorm:"type:varchar(100);uniqueIndex"`
+	Id         uint64    `json:"id" gorm:"primaryKey"`
+	CreatedAt  time.Time `json:"created_at" type:"date"`
+	UpdatedAt  time.Time `type:"date"`
+	DeletedAt  time.Time `type:"date"`
+	Status     int       `type:"int"`
 }
 
 func (bd BaseDomain) GetExternalId() string {
