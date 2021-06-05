@@ -139,15 +139,15 @@ func (bd BaseDomain) GetStatus() Status {
 }
 
 func (bd BaseDomain) GetCreatedAt() time.Time {
-	return time.Time(bd.CreatedAt)
+	return *bd.CreatedAt
 }
 
 func (bd BaseDomain) GetUpdatedAt() time.Time {
-	return time.Time(bd.UpdatedAt)
+	return *bd.UpdatedAt
 }
 
 func (bd BaseDomain) GetDeletedAt() time.Time {
-	return time.Time(bd.DeletedAt)
+	return *bd.DeletedAt
 }
 
 type Event interface {
