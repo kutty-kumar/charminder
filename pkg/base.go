@@ -3,6 +3,7 @@ package pkg
 import (
 	"database/sql"
 	"database/sql/driver"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -148,6 +149,23 @@ func (bd BaseDomain) GetUpdatedAt() time.Time {
 
 func (bd BaseDomain) GetDeletedAt() time.Time {
 	return *bd.DeletedAt
+}
+
+func (bd BaseDomain) SetExternalId(externalId string) {
+	bd.ExternalId = externalId
+}
+
+func (bd BaseDomain) ToJson() (string, error) {
+	jBytes, err := json.Marshal(bd)
+	if err != nil {
+		return "", err
+	}
+	return string(jBytes), nil
+}
+
+func (bd BaseDomain) String() string {
+	bdString, _ := bd.ToJson()
+	return bdString
 }
 
 type Event interface {
