@@ -35,16 +35,16 @@ func NewGetReq(baseUri string) (*http.Request, error) {
 	return http.NewRequest(http.MethodGet, baseUri, nil)
 }
 
-func NewPostReq(baseUri string) (*http.Request, error) {
-	return http.NewRequest(http.MethodPost, baseUri, nil)
+func NewPostReq(baseUri string, body io.Reader) (*http.Request, error) {
+	return http.NewRequest(http.MethodPost, baseUri, body)
 }
 
-func NewPutReq(baseUri string) (*http.Request, error) {
-	return http.NewRequest(http.MethodPut, baseUri, nil)
+func NewPutReq(baseUri string, body io.Reader) (*http.Request, error) {
+	return http.NewRequest(http.MethodPut, baseUri, body)
 }
 
-func NewPatchReq(baseUri string) (*http.Request, error) {
-	return http.NewRequest(http.MethodPatch, baseUri, nil)
+func NewPatchReq(baseUri string, body io.Reader) (*http.Request, error) {
+	return http.NewRequest(http.MethodPatch, baseUri, body)
 }
 
 func WithQueryParams(queryParams map[string]string) ReqOption {
@@ -119,7 +119,11 @@ func (hul *HttpUtil) DoGet(uri string, factoryFunc Factory, reqOptions ...ReqOpt
 }
 
 func (hul *HttpUtil) DoPost(uri string, factoryFunc Factory, bodyFunc func() []byte, reqOptions ...ReqOption) error {
-	res, err := hul.Client.Post(uri, "application/json", bytes.NewBuffer(bodyFunc()))
+	req, err := NewPostReq(uri, bytes.NewReader(bodyFunc()))
+	for _, option := range reqOptions {
+		option(req)
+	}
+	res, err := hul.Client.Do(req)
 	if err != nil {
 		return err
 	}
